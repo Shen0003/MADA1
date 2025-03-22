@@ -21,7 +21,7 @@ const GeminiChat = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showStopIcon, setShowStopIcon] = useState(false);
 
-  const API_KEY = "";
+  const API_KEY = "AIzaSyAAeHPBohRSMrMWmefpIH-8PV-HuHqt7Tw";
 
   useEffect(() => {
     const startChat = async () => {
@@ -56,7 +56,7 @@ const GeminiChat = () => {
     setMessages([...messages, userMessage]);
 
     const genAI = new GoogleGenerativeAI.GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const prompt = userMessage.text;
     const result = await model.generateContent(prompt);
     const response = result.response;

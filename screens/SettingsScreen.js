@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
+import Icon from '../ui/Icon';
 
 const SettingsScreen = ({ navigation }) => {
   const { 
@@ -71,7 +72,7 @@ const SettingsScreen = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Image source={require('../assets/back_icon.png')} style={styles.backIcon} />
+            <Icon name="arrow-back" size={24} color="black"/>
         </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
         <View style={styles.placeholder} />

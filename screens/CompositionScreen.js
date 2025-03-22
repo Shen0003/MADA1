@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
+import Icon from '../ui/Icon';
 
 const CompositionScreen = ({ navigation, route }) => {
   const { level = 1 } = route.params;
@@ -348,7 +349,7 @@ const CompositionScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Image source={require('../assets/back_icon.png')} style={styles.backIcon} />
+            <Icon name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text style={styles.levelTitle}>Level {level}</Text>
         <View style={styles.scoreContainer}>

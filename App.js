@@ -15,6 +15,7 @@ import LevelSelectScreen from './screens/LevelSelectScreen';
 import { AppContextProvider } from './context/AppContext';
 import GeminiChat from './screens/GeminiChat';
 
+
 const Stack = createStackNavigator();
 
 export default function App() {

@@ -8,11 +8,13 @@ import {
   Image, 
   Animated,
   Dimensions,
-  ImageBackground 
+  ImageBackground,
+  ScrollView, 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
 import { useFonts } from 'expo-font';
+import Icon from '../ui/Icon';
 
 const HomeScreen = ({ navigation }) => {
   const { playerName, stars } = useContext(AppContext);
@@ -45,22 +47,23 @@ const HomeScreen = ({ navigation }) => {
     <ImageBackground 
     source={require("../assets/home_bg.png")}
     style={styles.backgroundImage}>
-        <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container}>
+          <View style={styles.topContainer}>
             <View style={styles.header}>
                 <Text style={styles.title}>Math Explorers</Text>
                 <View style={styles.starContainer}>
-                <Image source={require('../assets/star.png')} style={styles.starIcon} />
+                  <Icon name="star" size={24} color="#f8b400" />
                 <Text style={styles.starCount}>{stars}</Text>
                 </View>
             </View>
-            
             <View style={styles.greeting}>
                 <Text style={styles.greetingText}>
                 {playerName ? `Hello, ${playerName}!` : 'Hello, Explorer!'}
                 </Text>
                 <Text style={styles.subtitle}>Choose your adventure:</Text>
             </View>
-
+          </View>
+          <ScrollView>
             <View style={styles.modulesContainer}>
                 <Animated.View style={[{transform: [{translateY}]}]}>
                 <TouchableOpacity 
@@ -94,15 +97,27 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
                 </TouchableOpacity>
                 </Animated.View>
+
+                <Animated.View style={[{transform: [{translateY}]}]}>
+                <TouchableOpacity 
+                    style={[styles.moduleButton, styles.compositionButton]}
+                    onPress={() => navigation.navigate('GeminiChat')}
+                >
+                    <Image source={require('../assets/composition_icon.png')} style={styles.moduleIcon} />
+                    <Text style={styles.moduleText}>Make Numbers</Text>
+                    <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
+                </TouchableOpacity>
+                </Animated.View>
             </View>
-            
-            <TouchableOpacity 
-                style={styles.settingsButton}
-                onPress={() => navigation.navigate('Settings')}
-            >
-                <Image source={require('../assets/settings_icon.png')} style={styles.settingsIcon} />
-            </TouchableOpacity>
-        </SafeAreaView>
+          </ScrollView>
+          
+          <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => navigation.navigate('Settings')}
+          >
+              <Icon name="settings" size={24} color="#333" />
+          </TouchableOpacity>
+      </SafeAreaView>
     </ImageBackground>
   );
 };
@@ -113,11 +128,26 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: 'transparent',
   },
+  topContainer: {
+
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    borderColor: 'black',
+    borderWidth: 10,
+    padding: 20,
+    paddingTop: 30,
+    marginBottom: 5
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingTop: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+    paddingBottom: 10,
   },
   backgroundImage: {
     flex: 1,
@@ -132,14 +162,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 20,
-    elevation: 3,
+    elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    marginTop: 2
   },
   starIcon: {
     width: 24,
@@ -165,10 +196,10 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   modulesContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 20,
+    paddingVertical: 30,
   },
   moduleButton: {
     width: Dimensions.get('window').width - 60,
@@ -194,6 +225,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     marginBottom: 10,
+    borderRadius: 30,
   },
   moduleText: {
     fontSize: 22,
@@ -211,9 +243,9 @@ const styles = StyleSheet.create({
     bottom: 20,
     right: 20,
     backgroundColor: '#fff',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,

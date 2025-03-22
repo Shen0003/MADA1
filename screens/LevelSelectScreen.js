@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
+import Icon from '../ui/Icon';
 
 const LevelSelectScreen = ({ navigation, route }) => {
   const { module } = route.params;
@@ -96,7 +97,7 @@ const LevelSelectScreen = ({ navigation, route }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Image source={require('../assets/back_icon.png')} style={styles.backIcon} />
+            <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.title}>{moduleInfo[module].title}</Text>
           <View style={styles.placeholder} />

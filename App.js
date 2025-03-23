@@ -14,32 +14,36 @@ import LevelSelectScreen from './screens/LevelSelectScreen';
 // Import context for global state management
 import { AppContextProvider } from './context/AppContext';
 import GeminiChat from './screens/GeminiChat';
+import { StatusBar } from 'expo-status-bar';
 
 
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppContextProvider>
-        <NavigationContainer>
-          <Stack.Navigator 
-            initialRouteName="Home"
-            screenOptions={{
-              headerShown: false,
-              cardStyle: { backgroundColor: '#f8f6ff' }
-            }}
-          >
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="LevelSelect" component={LevelSelectScreen} />
-            <Stack.Screen name="Comparison" component={ComparisonScreen} />
-            <Stack.Screen name="Ordering" component={OrderingScreen} />
-            <Stack.Screen name="Composition" component={CompositionScreen} />
-            <Stack.Screen name="GeminiChat" component={GeminiChat} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </AppContextProvider>
-    </SafeAreaProvider>
+    <>
+      <StatusBar style="auto" />
+      <SafeAreaProvider>
+        <AppContextProvider>
+          <NavigationContainer>
+            <Stack.Navigator 
+              initialRouteName="Home"
+              screenOptions={{
+                headerShown: false,
+                cardStyle: { backgroundColor: '#f8f6ff' },
+              }}
+            >
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="LevelSelect" component={LevelSelectScreen} />
+              <Stack.Screen name="Comparison" component={ComparisonScreen} />
+              <Stack.Screen name="Ordering" component={OrderingScreen} />
+              <Stack.Screen name="Composition" component={CompositionScreen} />
+              <Stack.Screen name="GeminiChat" component={GeminiChat} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AppContextProvider>
+      </SafeAreaProvider>
+    </>
   );
 }

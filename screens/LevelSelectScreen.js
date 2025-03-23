@@ -76,11 +76,7 @@ const LevelSelectScreen = ({ navigation, route }) => {
     return (
       <View style={styles.starsContainer}>
         {[1, 2, 3].map((i) => (
-          <Image 
-            key={i}
-            source={i <= stars ? require('../assets/star_filled.png') : require('../assets/star_empty.png')} 
-            style={styles.levelStar} 
-          />
+          <Icon name={i <= stars ? "star" : "star-outline"} size={24} color="#f8b400" />
         ))}
       </View>
     );

@@ -7,10 +7,10 @@ export const AppContext = createContext();
 export const AppContextProvider = ({ children }) => {
   const [playerName, setPlayerName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [progress, setProgress] = useState({
-    comparison: { level1: 0, level2: 0, level3: 0 },
-    ordering: { level1: 0, level2: 0, level3: 0 },
-    composition: { level1: 0, level2: 0, level3: 0 },
+  const [progressScore, setProgressScore] = useState({
+    comparison: 0,
+    ordering: 0,
+    composition: 0,
   });
   const [stars, setStars] = useState(0);
 
@@ -20,12 +20,12 @@ export const AppContextProvider = ({ children }) => {
       try {
         const savedName = await AsyncStorage.getItem('playerName');
         const savedSound = await AsyncStorage.getItem('soundEnabled');
-        const savedProgress = await AsyncStorage.getItem('progress');
+        const savedProgressScore = await AsyncStorage.getItem('progressScore');
         const savedStars = await AsyncStorage.getItem('stars');
         
         if (savedName) setPlayerName(savedName);
         if (savedSound) setSoundEnabled(savedSound === 'true');
-        if (savedProgress) setProgress(JSON.parse(savedProgress));
+        if (savedProgressScore) setProgressScore(JSON.parse(savedProgressScore));
         if (savedStars) setStars(parseInt(savedStars, 10));
       } catch (error) {
         console.log('Error loading data:', error);
@@ -41,7 +41,7 @@ export const AppContextProvider = ({ children }) => {
       try {
         await AsyncStorage.setItem('playerName', playerName);
         await AsyncStorage.setItem('soundEnabled', soundEnabled.toString());
-        await AsyncStorage.setItem('progress', JSON.stringify(progress));
+        await AsyncStorage.setItem('progressScore', JSON.stringify(progressScore));
         await AsyncStorage.setItem('stars', stars.toString());
       } catch (error) {
         console.log('Error saving data:', error);
@@ -49,21 +49,18 @@ export const AppContextProvider = ({ children }) => {
     };
     
     saveData();
-  }, [playerName, soundEnabled, progress, stars]);
+  }, [playerName, soundEnabled, progressScore, stars]);
 
   // Update progress for a specific module and level
-  const updateProgress = (module, level, score) => {
-    setProgress(prevProgress => {
-      const currentProgress = prevProgress[module][`level${level}`];
-      const newProgress = Math.max(currentProgress, score);
+  function updateProgressScore(module, score) {
+    setProgressScore((prevProgressScore) => {
+      const currentProgressScore = prevProgressScore[module];
+      const newProgressScore = Math.max(currentProgressScore, score);
       
       return {
-        ...prevProgress,
-        [module]: {
-          ...prevProgress[module],
-          [`level${level}`]: newProgress
-        }
-      };
+        ...prevProgressScore,
+        [module]: newProgressScore
+      }
     });
   };
 
@@ -77,8 +74,8 @@ export const AppContextProvider = ({ children }) => {
     setPlayerName,
     soundEnabled,
     setSoundEnabled,
-    progress,
-    updateProgress,
+    progressScore,
+    updateProgressScore,
     stars,
     awardStars
   };

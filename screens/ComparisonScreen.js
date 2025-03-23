@@ -14,25 +14,28 @@ import { AppContext } from '../context/AppContext';
 import Icon from '../ui/Icon';
 
 const ComparisonScreen = ({ navigation, route }) => {
-  const { level = 1 } = route.params;
-  const { updateProgress, awardStars, soundEnabled } = useContext(AppContext);
+  const { updateProgressScore, awardStars, soundEnabled } = useContext(AppContext);
   
   // Game state
+  const [level, setLevel] = useState(1);
   const [leftNumber, setLeftNumber] = useState(0);
   const [rightNumber, setRightNumber] = useState(0);
   const [targetRelation, setTargetRelation] = useState('greater'); // 'greater' or 'less'
   const [score, setScore] = useState(0);
+  const [answeredWrong, setAnsweredWrong] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(10);
   const [isCorrect, setIsCorrect] = useState(null);
   const [alligatorDirection, setAlligatorDirection] = useState('right');
   const [alligatorAnimation] = useState(new Animated.Value(0));
+  const [countdown, setCountdown] = useState(3); // Countdown from 3
+  const [gameStarted, setGameStarted] = useState(false); // Track if game has started
+  const wrongAnswers = 3;
   
   // Generate random numbers based on level
-  const generateNumbers = () => {
+  function generateNumbers(newLevel) {
     let left, right;
     
-    switch(level) {
+    switch(newLevel) {
       case 1: // Single-digit numbers
         left = Math.floor(Math.random() * 9) + 1;
         right = Math.floor(Math.random() * 9) + 1;
@@ -68,13 +71,16 @@ const ComparisonScreen = ({ navigation, route }) => {
     setTargetRelation(Math.random() < 0.5 ? 'greater' : 'less');
   };
   
+
   // Initialize the game
   useEffect(() => {
-    generateNumbers();
-  }, [level]);
+    generateNumbers(1); // set level as 1 directly, because we dont want everytime level state changed, it call the generateNumbers function second time at here
+  }, []); // only call this when initialise (include state initialisation too, that make state change)
   
   // Handle answer
   const handleAnswer = (answer) => {
+    let newQuestionsAnswered = questionsAnswered + 1;
+    setQuestionsAnswered(newQuestionsAnswered);
     let correct = false;
     
     if (targetRelation === 'greater') {
@@ -103,34 +109,39 @@ const ComparisonScreen = ({ navigation, route }) => {
       // Reset animation
       alligatorAnimation.setValue(0);
       
+      let newScore = score;
+      let newAnsweredWrong = answeredWrong;
       // Update score and question count
       if (correct) {
-        setScore(prevScore => prevScore + 1);
+        newScore += 1;
+        setScore(newScore); // **will only change state value to NEW one after the whole handleAnswer function is executed!
+      } else {
+        newAnsweredWrong += 1;
+        setAnsweredWrong(newAnsweredWrong); // **will only change state value to NEW one after the whole handleAnswer function is executed!
       }
+
+      // Determine new level based on questions answered
+
+      let newLevel = level;
+
+      if (newQuestionsAnswered >= 3) {  // Change level at exactly 3 tries
+        newLevel = 2;
+      } else {
+        newLevel = 1;
+      }
+      setLevel(newLevel);
       
-      const newQuestionsAnswered = questionsAnswered + 1;
-      setQuestionsAnswered(newQuestionsAnswered);
+      
       
       // Check if game is over
-      if (newQuestionsAnswered >= totalQuestions) {
-        const finalScore = correct ? score + 1 : score;
-        const percentage = Math.round((finalScore / totalQuestions) * 100);
-        
+      if (newAnsweredWrong >= wrongAnswers) { // because state didnt update immediately, so use this manual for immediate check
         // Update progress
-        updateProgress('comparison', level, percentage);
+        updateProgressScore('comparison', score);
         
-        // Award stars based on performance
-        let starsEarned = 0;
-        if (percentage >= 90) starsEarned = 3;
-        else if (percentage >= 70) starsEarned = 2;
-        else if (percentage >= 50) starsEarned = 1;
-        
-        awardStars(starsEarned);
-        
-        // Show results
+        // Show some alert or navigate to results screen
         Alert.alert(
-          'Level Complete!',
-          `You got ${finalScore} out of ${totalQuestions} correct!\n\nYou earned ${starsEarned} stars!`,
+          'Game Over!',
+          `Your score: ${score}`,
           [
             { 
               text: 'Try Again', 
@@ -146,7 +157,7 @@ const ComparisonScreen = ({ navigation, route }) => {
         // Generate new numbers for next question
         setTimeout(() => {
           setIsCorrect(null);
-          generateNumbers();
+          generateNumbers(newLevel);
         }, 500);
       }
     });
@@ -156,10 +167,35 @@ const ComparisonScreen = ({ navigation, route }) => {
   const resetGame = () => {
     setScore(0);
     setQuestionsAnswered(0);
+    setAnsweredWrong(0);
+    setLevel(1);
     setIsCorrect(null);
-    generateNumbers();
+    generateNumbers(1);
+    setGameStarted(false);
+    setCountdown(3);
   };
-  
+
+  // Initialize the game with countdown
+  useEffect(() => {
+    // Start the countdown
+    const countdownInterval = setInterval(() => {
+      setCountdown(prevCount => {
+        if (prevCount <= 1) {
+          clearInterval(countdownInterval);
+          setGameStarted(true);
+          generateNumbers(1);
+          return 0;
+        }
+        return prevCount - 1;
+      });
+    }, 1000);
+    
+    // Cleanup interval if component unmounts
+    return () => clearInterval(countdownInterval);
+  }, []); // only call this when initializing
+
+
+
   // Animation interpolation for alligator
   const alligatorTranslateX = alligatorAnimation.interpolate({
     inputRange: [0, 0.5, 1],
@@ -174,6 +210,34 @@ const ComparisonScreen = ({ navigation, route }) => {
     outputRange: [1, 1.2, 1.5, 1.2, 1]
   });
 
+  // Render countdown or game based on gameStarted state
+  if (!gameStarted) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.levelTitle}>Level {level}</Text>
+          <View style={styles.scoreContainer}>
+            <Text style={styles.scoreText}>{score}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.countdownContainer}>
+          <Text style={styles.countdownText}>Get Ready!</Text>
+          <Text style={styles.countdownNumber}>{countdown}</Text>
+          <Text style={styles.countdownInstructions}>
+            You will need to pick the number that is correct!
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -185,7 +249,7 @@ const ComparisonScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <Text style={styles.levelTitle}>Level {level}</Text>
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreText}>{score}/{totalQuestions}</Text>
+          <Text style={styles.scoreText}>{score}</Text>
         </View>
       </View>
       
@@ -274,12 +338,12 @@ const ComparisonScreen = ({ navigation, route }) => {
           <View 
             style={[
               styles.progressFill, 
-              { width: `${(questionsAnswered / totalQuestions) * 100}%` }
+              { width: `${Math.min((questionsAnswered / 10) * 100, 100)}%` }
             ]} 
           />
         </View>
         <Text style={styles.progressText}>
-          {questionsAnswered}/{totalQuestions} Questions
+          {questionsAnswered} Questions Answered!
         </Text>
       </View>
     </SafeAreaView>
@@ -411,6 +475,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  countdownContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  countdownText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#7a5cf0',
+    marginBottom: 20,
+  },
+  countdownNumber: {
+    fontSize: 80,
+    fontWeight: 'bold',
+    color: '#ff9500',
+    marginBottom: 30,
+  },
+  countdownInstructions: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#333',
+    maxWidth: '80%',
   },
 });
 

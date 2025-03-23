@@ -17,7 +17,7 @@ import { useFonts } from 'expo-font';
 import Icon from '../ui/Icon';
 
 const HomeScreen = ({ navigation }) => {
-  const { playerName, stars } = useContext(AppContext);
+  const { playerName, stars, progressScore } = useContext(AppContext);
   const [bounce] = useState(new Animated.Value(0));
   
   // Animation for module buttons
@@ -53,7 +53,7 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.title}>Math Explorers</Text>
                 <View style={styles.starContainer}>
                   <Icon name="star" size={24} color="#f8b400" />
-                <Text style={styles.starCount}>{stars}</Text>
+                  <Text style={styles.starCount}>{progressScore['comparison'] + progressScore['ordering']}</Text>
                 </View>
             </View>
             <View style={styles.greeting}>
@@ -66,47 +66,59 @@ const HomeScreen = ({ navigation }) => {
           <ScrollView>
             <View style={styles.modulesContainer}>
                 <Animated.View style={[{transform: [{translateY}]}]}>
-                <TouchableOpacity 
-                    style={[styles.moduleButton, styles.comparisonButton]}
-                    onPress={() => navigation.navigate('LevelSelect', { module: 'comparison' })}
-                >
+                  <TouchableOpacity 
+                      style={[styles.moduleButton, styles.comparisonButton]}
+                      onPress={() => navigation.navigate('Comparison')}
+                  >
                     <Image source={require('../assets/comparison_icon.png')} style={styles.moduleIcon} />
                     <Text style={styles.moduleText}>Compare Numbers</Text>
                     <Text style={styles.moduleDesc}>Greater than or less than?</Text>
-                </TouchableOpacity>
+                    <View style={styles.starContainer}>
+                      <Icon name="star" size={24} color="#f8b400" />
+                      <Text style={styles.starCount}>{progressScore['comparison']}</Text>
+                    </View>
+                  </TouchableOpacity>
                 </Animated.View>
                 
                 <Animated.View style={[{transform: [{translateY: translateY}]}]}>
-                <TouchableOpacity 
-                    style={[styles.moduleButton, styles.orderingButton]}
-                    onPress={() => navigation.navigate('LevelSelect', { module: 'ordering' })}
-                >
+                  <TouchableOpacity 
+                      style={[styles.moduleButton, styles.orderingButton]}
+                      onPress={() => navigation.navigate('Ordering')}
+                  >
                     <Image source={require('../assets/ordering_icon.png')} style={styles.moduleIcon} />
                     <Text style={styles.moduleText}>Order Numbers</Text>
                     <Text style={styles.moduleDesc}>Put numbers in order</Text>
-                </TouchableOpacity>
+                    <View style={styles.starContainer}>
+                      <Icon name="star" size={24} color="#f8b400" />
+                      <Text style={styles.starCount}>{progressScore['ordering']}</Text>
+                    </View>
+                  </TouchableOpacity>
                 </Animated.View>
                 
                 <Animated.View style={[{transform: [{translateY}]}]}>
-                <TouchableOpacity 
-                    style={[styles.moduleButton, styles.compositionButton]}
-                    onPress={() => navigation.navigate('LevelSelect', { module: 'composition' })}
-                >
+                  <TouchableOpacity 
+                      style={[styles.moduleButton, styles.compositionButton]}
+                      onPress={() => navigation.navigate('LevelSelect', { module: 'composition' })}
+                  >
                     <Image source={require('../assets/composition_icon.png')} style={styles.moduleIcon} />
                     <Text style={styles.moduleText}>Make Numbers</Text>
                     <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
-                </TouchableOpacity>
+                    <View style={styles.starContainer}>
+                      <Icon name="star" size={24} color="#f8b400" />
+                      <Text style={styles.starCount}>{progressScore['composition']}</Text>
+                    </View>
+                  </TouchableOpacity>
                 </Animated.View>
 
                 <Animated.View style={[{transform: [{translateY}]}]}>
-                <TouchableOpacity 
-                    style={[styles.moduleButton, styles.compositionButton]}
-                    onPress={() => navigation.navigate('GeminiChat')}
-                >
-                    <Image source={require('../assets/composition_icon.png')} style={styles.moduleIcon} />
-                    <Text style={styles.moduleText}>Make Numbers</Text>
-                    <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity 
+                      style={[styles.moduleButton, styles.compositionButton]}
+                      onPress={() => navigation.navigate('GeminiChat')}
+                  >
+                      <Image source={require('../assets/composition_icon.png')} style={styles.moduleIcon} />
+                      <Text style={styles.moduleText}>Make Numbers</Text>
+                      <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
+                  </TouchableOpacity>
                 </Animated.View>
             </View>
           </ScrollView>
@@ -237,6 +249,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     opacity: 0.9,
+    marginBottom: 5,
   },
   settingsButton: {
     position: 'absolute',

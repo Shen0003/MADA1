@@ -20,27 +20,31 @@ const NUMBER_ITEM_WIDTH = 60;
 const NUMBER_ITEM_MARGIN = 5;
 
 const OrderingScreen = ({ navigation, route }) => {
-  const { level = 1 } = route.params;
-  const { updateProgress, awardStars, soundEnabled } = useContext(AppContext);
+  const { updateProgressScore, progressScore, soundEnabled } = useContext(AppContext);
   
   // Game state
+  const [level, setLevel] = useState(1);
   const [numbers, setNumbers] = useState([]);
   const [orderedNumbers, setOrderedNumbers] = useState([]);
   const [orderDirection, setOrderDirection] = useState('ascending');
   const [score, setScore] = useState(0);
+  const [answeredWrong, setAnsweredWrong] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(5);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(null);
   const [animations, setAnimations] = useState([]);
+  const [countdown, setCountdown] = useState(3); // Countdown from 3
+  const [gameStarted, setGameStarted] = useState(false); // Track if game has started
+  const wrongAnswers = 3;
+
   
   // Generate random numbers based on level
-  const generateNumbers = () => {
+  const generateNumbers = (newLevel) => {
     let numberSet = [];
     let count = 3;
     
     // Determine number count and range based on level
-    switch(level) {
+    switch(newLevel) {
       case 1: // Simple sequences (3-5 single-digit numbers)
         count = Math.floor(Math.random() * 3) + 3; // 3 to 5 numbers
         for (let i = 0; i < count; i++) {
@@ -107,8 +111,8 @@ const OrderingScreen = ({ navigation, route }) => {
   
   // Initialize the game
   useEffect(() => {
-    generateNumbers();
-  }, [level]);
+    generateNumbers(1);
+  }, []);
   
   // Create pan responders for draggable number items
   const createPanResponder = (index) => {
@@ -165,6 +169,8 @@ const OrderingScreen = ({ navigation, route }) => {
   
   // Handle submission of answer
   const handleSubmit = () => {
+    let newQuestionsAnswered = questionsAnswered + 1;
+    setQuestionsAnswered(newQuestionsAnswered);
     // Check if ordering is correct
     let correct = true;
     const sortedNumbers = [...numbers].sort((a, b) => 
@@ -181,36 +187,41 @@ const OrderingScreen = ({ navigation, route }) => {
     setSubmitted(true);
     setIsCorrect(correct);
     
-    // Update score
+    let newScore = score;
+    let newAnsweredWrong = answeredWrong;
+    // Update score and question count
     if (correct) {
-      setScore(prevScore => prevScore + 1);
+      newScore += 1;
+      setScore(newScore); // **will only change state value to NEW one after the whole handleAnswer function is executed!
+    } else {
+      newAnsweredWrong += 1;
+      setAnsweredWrong(newAnsweredWrong); // **will only change state value to NEW one after the whole handleAnswer function is executed!
     }
+
+    // Determine new level based on questions answered
+
+    let newLevel = level;
+
+    if (newQuestionsAnswered >= 6) {  // Change level at exactly 3 tries
+      newLevel = 3;
+    } else if (newQuestionsAnswered >= 3) {  // Change level at exactly 6 tries
+      newLevel = 2;
+    } else {
+      newLevel = 1;
+    }
+    setLevel(newLevel);
     
     // Wait before proceeding to next question or ending game
     setTimeout(() => {
-      const newQuestionsAnswered = questionsAnswered + 1;
-      setQuestionsAnswered(newQuestionsAnswered);
-      
       // Check if game is over
-      if (newQuestionsAnswered >= totalQuestions) {
-        const finalScore = correct ? score + 1 : score;
-        const percentage = Math.round((finalScore / totalQuestions) * 100);
-        
+      if (newAnsweredWrong >= wrongAnswers) {
         // Update progress
-        updateProgress('ordering', level, percentage);
-        
-        // Award stars based on performance
-        let starsEarned = 0;
-        if (percentage >= 90) starsEarned = 3;
-        else if (percentage >= 70) starsEarned = 2;
-        else if (percentage >= 50) starsEarned = 1;
-        
-        awardStars(starsEarned);
+        updateProgressScore('ordering', score);
         
         // Show results
         Alert.alert(
           'Level Complete!',
-          `You got ${finalScore} out of ${totalQuestions} correct!\n\nYou earned ${starsEarned} stars!`,
+          `You got ${score} out of ${questionsAnswered} correct!`,
           [
             { 
               text: 'Try Again', 
@@ -226,7 +237,7 @@ const OrderingScreen = ({ navigation, route }) => {
         // Generate new numbers for next question
         setSubmitted(false);
         setIsCorrect(null);
-        generateNumbers();
+        generateNumbers(newLevel);
       }
     }, 1500);
   };
@@ -235,9 +246,12 @@ const OrderingScreen = ({ navigation, route }) => {
   const resetGame = () => {
     setScore(0);
     setQuestionsAnswered(0);
-    setSubmitted(false);
+    setAnsweredWrong(0);
+    setLevel(1);
     setIsCorrect(null);
-    generateNumbers();
+    generateNumbers(1);
+    setGameStarted(false);
+    setCountdown(3);
   };
   
   // Render individual draggable number item
@@ -266,6 +280,54 @@ const OrderingScreen = ({ navigation, route }) => {
     );
   };
 
+    // Initialize the game with countdown
+    useEffect(() => {
+      // Start the countdown
+      const countdownInterval = setInterval(() => {
+        setCountdown(prevCount => {
+          if (prevCount <= 1) {
+            clearInterval(countdownInterval);
+            setGameStarted(true);
+            generateNumbers(1);
+            return 0;
+          }
+          return prevCount - 1;
+        });
+      }, 1000);
+      
+      // Cleanup interval if component unmounts
+      return () => clearInterval(countdownInterval);
+    }, []); // only call this when initializing
+
+  
+  // Render countdown or game based on gameStarted state
+  if (!gameStarted) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.levelTitle}>Level {level}</Text>
+          <View style={styles.scoreContainer}>
+            <Text style={styles.scoreText}>{score}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.countdownContainer}>
+          <Text style={styles.countdownText}>Get Ready!</Text>
+          <Text style={styles.countdownNumber}>{countdown}</Text>
+          <Text style={styles.countdownInstructions}>
+            You will need to pick the number that is correct!
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -277,7 +339,7 @@ const OrderingScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <Text style={styles.levelTitle}>Level {level}</Text>
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreText}>{score}/{totalQuestions}</Text>
+          <Text style={styles.scoreText}>{score}</Text>
         </View>
       </View>
       
@@ -337,12 +399,12 @@ const OrderingScreen = ({ navigation, route }) => {
           <View 
             style={[
               styles.progressFill, 
-              { width: `${(questionsAnswered / totalQuestions) * 100}%` }
+              { width: `${questionsAnswered * 100}%` }
             ]} 
           />
         </View>
         <Text style={styles.progressText}>
-          {questionsAnswered}/{totalQuestions} Questions
+          {questionsAnswered} Questions
         </Text>
       </View>
     </SafeAreaView>
@@ -484,6 +546,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  countdownContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  countdownText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#7a5cf0',
+    marginBottom: 20,
+  },
+  countdownNumber: {
+    fontSize: 80,
+    fontWeight: 'bold',
+    color: '#ff9500',
+    marginBottom: 30,
+  },
+  countdownInstructions: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#333',
+    maxWidth: '80%',
   },
 });
 

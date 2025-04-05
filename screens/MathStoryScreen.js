@@ -14,7 +14,9 @@ import { FontAwesome } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import SoundPlayer from "react-native-sound-player";
 import Icon from "../ui/Icon";
+import { GEMINI_API_KEY } from '@env';
 
+const API_KEY = GEMINI_API_KEY;
 
 const SYSTEM_INSTRUCTION = `
 You are a friendly and fun math tutor for 5-year-old children. Your job is to create engaging and simple math story problems that follow these rules:
@@ -35,8 +37,6 @@ const MathStoryScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isNextMessage, setIsNextMessage] = useState(false);
-
-  const API_KEY = "AIzaSyCXw6LbdoLmlzfu31AnYg-eaWJn6XkrMek";
 
   useEffect(() => {
     generateNewProblem();

@@ -1,4 +1,3 @@
-// screens/OrderingScreen.js
 import React, { useState, useEffect, useContext } from 'react';
 import { 
   View, 
@@ -19,10 +18,8 @@ const { width } = Dimensions.get('window');
 const NUMBER_ITEM_WIDTH = 60;
 const NUMBER_ITEM_MARGIN = 5;
 
-const OrderingScreen = ({ navigation, route }) => {
-  const { updateProgressScore, progressScore, soundEnabled } = useContext(AppContext);
-  
-  // Game state
+const OrderingScreen = ({ navigation }) => {
+  const { updateProgressScore } = useContext(AppContext);
   const [level, setLevel] = useState(1);
   const [numbers, setNumbers] = useState([]);
   const [orderedNumbers, setOrderedNumbers] = useState([]);
@@ -35,6 +32,7 @@ const OrderingScreen = ({ navigation, route }) => {
   const [animations, setAnimations] = useState([]);
   const [countdown, setCountdown] = useState(3); // Countdown from 3
   const [gameStarted, setGameStarted] = useState(false); // Track if game has started
+  const [showBar, setShowBar] = useState(false); // Show progress bar
   const wrongAnswers = 3;
 
   
@@ -109,11 +107,6 @@ const OrderingScreen = ({ navigation, route }) => {
     setAnimations(newAnimations);
   };
   
-  // Initialize the game
-  useEffect(() => {
-    generateNumbers(1);
-  }, []);
-  
   // Create pan responders for draggable number items
   const createPanResponder = (index) => {
     return PanResponder.create({
@@ -169,6 +162,7 @@ const OrderingScreen = ({ navigation, route }) => {
   
   // Handle submission of answer
   const handleSubmit = () => {
+    setShowBar(true);
     let newQuestionsAnswered = questionsAnswered + 1;
     setQuestionsAnswered(newQuestionsAnswered);
     // Check if ordering is correct
@@ -202,9 +196,9 @@ const OrderingScreen = ({ navigation, route }) => {
 
     let newLevel = level;
 
-    if (newQuestionsAnswered >= 6) {  // Change level at exactly 3 tries
+    if (newQuestionsAnswered >= 10) {  // Change level at exactly 10 tries
       newLevel = 3;
-    } else if (newQuestionsAnswered >= 3) {  // Change level at exactly 6 tries
+    } else if (newQuestionsAnswered >= 5) {  // Change level at exactly 5 tries
       newLevel = 2;
     } else {
       newLevel = 1;
@@ -220,15 +214,15 @@ const OrderingScreen = ({ navigation, route }) => {
         
         // Show results
         Alert.alert(
-          'Level Complete!',
-          `You got ${score} out of ${questionsAnswered} correct!`,
+          'Game Over!',
+          `Your score: ${score}`,
           [
             { 
               text: 'Try Again', 
               onPress: () => resetGame() 
             },
             { 
-              text: 'Level Select', 
+              text: 'Home', 
               onPress: () => navigation.goBack() 
             }
           ]
@@ -238,6 +232,7 @@ const OrderingScreen = ({ navigation, route }) => {
         setSubmitted(false);
         setIsCorrect(null);
         generateNumbers(newLevel);
+        setShowBar(false);
       }
     }, 1500);
   };
@@ -251,7 +246,9 @@ const OrderingScreen = ({ navigation, route }) => {
     setIsCorrect(null);
     generateNumbers(1);
     setGameStarted(false);
+    setSubmitted(false);
     setCountdown(3);
+    setShowBar(false);
   };
   
   // Render individual draggable number item
@@ -282,6 +279,8 @@ const OrderingScreen = ({ navigation, route }) => {
 
     // Initialize the game with countdown
     useEffect(() => {
+      if (gameStarted) return; // skip this effect if game has already started
+      
       // Start the countdown
       const countdownInterval = setInterval(() => {
         setCountdown(prevCount => {
@@ -294,10 +293,9 @@ const OrderingScreen = ({ navigation, route }) => {
           return prevCount - 1;
         });
       }, 1000);
-      
       // Cleanup interval if component unmounts
       return () => clearInterval(countdownInterval);
-    }, []); // only call this when initializing
+    }, [gameStarted]); // only call this when initializing
 
   
   // Render countdown or game based on gameStarted state
@@ -314,10 +312,15 @@ const OrderingScreen = ({ navigation, route }) => {
           <Text style={styles.levelTitle}>Level {level}</Text>
           <View style={styles.scoreContainer}>
             <Text style={styles.scoreText}>{score}</Text>
+            <Icon name="star" size={24} color="#f8b400" />
           </View>
         </View>
         
         <View style={styles.countdownContainer}>
+          <Image 
+            source={require('../assets/ordering_icon.png')} 
+            style={styles.symbolImage} 
+          />
           <Text style={styles.countdownText}>Get Ready!</Text>
           <Text style={styles.countdownNumber}>{countdown}</Text>
           <Text style={styles.countdownInstructions}>
@@ -340,13 +343,20 @@ const OrderingScreen = ({ navigation, route }) => {
         <Text style={styles.levelTitle}>Level {level}</Text>
         <View style={styles.scoreContainer}>
           <Text style={styles.scoreText}>{score}</Text>
+          <Icon name="star" size={24} color="#f8b400" />
         </View>
       </View>
       
       <View style={styles.questionContainer}>
-        <Text style={styles.questionText}>
-          Arrange the numbers in {orderDirection} order
-        </Text>
+        <View style={styles.questionTextContainer}>
+          <Image 
+            source={require('../assets/ordering_icon.png')} 
+            style={styles.symbolImage} 
+          />
+          <Text style={styles.questionText}>
+            Arrange the numbers in {orderDirection} order
+          </Text>
+        </View>
         
         <View style={styles.directionsContainer}>
           <Image 
@@ -395,14 +405,7 @@ const OrderingScreen = ({ navigation, route }) => {
       </View>
       
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View 
-            style={[
-              styles.progressFill, 
-              { width: `${questionsAnswered * 100}%` }
-            ]} 
-          />
-        </View>
+        <View style={[styles.progressBar, { backgroundColor: showBar ? '#f06292' : '#eee' }]}></View>
         <Text style={styles.progressText}>
           {questionsAnswered} Questions
         </Text>
@@ -437,6 +440,9 @@ const styles = StyleSheet.create({
     color: '#f06292',
   },
   scoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: '#f06292',
     paddingHorizontal: 15,
     paddingVertical: 8,
@@ -446,6 +452,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  starIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 5,
+  },
+  questionTextContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  symbolImage: {
+    width: 40,
+    height: 40,
+    marginBottom: 10,
   },
   questionContainer: {
     flex: 1,
@@ -532,15 +552,9 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 10,
-    backgroundColor: '#eee',
     borderRadius: 5,
     marginBottom: 5,
     overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#f06292',
-    borderRadius: 5,
   },
   progressText: {
     fontSize: 14,
@@ -556,7 +570,7 @@ const styles = StyleSheet.create({
   countdownText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#7a5cf0',
+    color: '#f06292',
     marginBottom: 20,
   },
   countdownNumber: {

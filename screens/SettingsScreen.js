@@ -1,4 +1,3 @@
-// screens/SettingsScreen.js
 import React, { useContext, useState } from 'react';
 import { 
   View, 
@@ -19,11 +18,9 @@ const SettingsScreen = ({ navigation }) => {
   const { 
     playerName, 
     setPlayerName, 
-    soundEnabled, 
-    setSoundEnabled, 
-    stars 
+    progressScore,
+    resetProgressScore,
   } = useContext(AppContext);
-  
   const [tempName, setTempName] = useState(playerName);
   
   // Save changes
@@ -56,8 +53,9 @@ const SettingsScreen = ({ navigation }) => {
   };
   
   const resetProgress = () => {
-    // This would be handled in the AppContext
-    // For now, just show a message
+    resetProgressScore('comparison', 0);
+    resetProgressScore('ordering', 0);
+    resetProgressScore('composition', 0);
     Alert.alert(
       'Progress Reset',
       'All progress has been reset.',
@@ -83,54 +81,34 @@ const SettingsScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Player Profile</Text>
           
           <View style={styles.profileSection}>
-            <Image 
-              source={require('../assets/avatar_placeholder.png')} 
-              style={styles.avatar} 
-            />
-            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Player Name:</Text>
+              <TextInput
+                style={styles.textInput}
+                value={tempName}
+                onChangeText={setTempName}
+                placeholder="Enter your name"
+                maxLength={20}
+              />
+            </View>
+            <View style= {styles.line}></View>
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Image source={require('../assets/star.png')} style={styles.statIcon} />
-                <Text style={styles.statValue}>{stars}</Text>
-                <Text style={styles.statLabel}>Stars</Text>
+                <Icon name="star" size={30} color="#f1c40f" style={styles.statIcon} />
+                <Text style={styles.statValue}>{progressScore['comparison'] + progressScore['ordering'] + progressScore['composition']}</Text>
+                <Text style={styles.statLabel}>Stars Collected</Text>
               </View>
-              {/* Additional stats could go here */}
             </View>
           </View>
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Player Name:</Text>
-            <TextInput
-              style={styles.textInput}
-              value={tempName}
-              onChangeText={setTempName}
-              placeholder="Enter your name"
-              maxLength={20}
-            />
-          </View>
+        
         </View>
         
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App Settings</Text>
-          
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Sound Effects</Text>
-            <Switch
-              value={soundEnabled}
-              onValueChange={setSoundEnabled}
-              trackColor={{ false: '#d0d0d0', true: '#a18cd1' }}
-              thumbColor={soundEnabled ? '#7a5cf0' : '#f4f3f4'}
-            />
-          </View>
-          
-          {/* Additional settings could go here */}
-        </View>
         
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           
           <View style={styles.aboutContainer}>
-            <Text style={styles.appName}>Math Explorers</Text>
+            <Text style={styles.appName}>Mathdu</Text>
             <Text style={styles.appVersion}>Version 1.0.0</Text>
             <Text style={styles.appDescription}>
               A fun educational game to help children learn number concepts.
@@ -141,6 +119,7 @@ const SettingsScreen = ({ navigation }) => {
               <Text style={styles.featureItem}>• Compare Numbers</Text>
               <Text style={styles.featureItem}>• Order Numbers</Text>
               <Text style={styles.featureItem}>• Compose Numbers</Text>
+              <Text style={styles.featureItem}>• Maths Story Problem Solving</Text>
             </View>
           </View>
         </View>
@@ -211,31 +190,38 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#7a5cf0',
+    color: 'blue',
+    fontStyle: 'italic',
     marginBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     paddingBottom: 8,
   },
   profileSection: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
+    gap: 10,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 20,
+  line: {
+    width: '100%',
+    height: 1,
+    backgroundColor: 'rgba(59, 65, 242, 0.19)',
+    marginBottom: 10,
   },
   statsContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingStart: 11
   },
   statItem: {
     alignItems: 'center',
     marginRight: 15,
   },
   statIcon: {
+    alignItems: 'center',
     width: 30,
     height: 30,
     marginBottom: 5,
@@ -250,6 +236,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   inputContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
     marginBottom: 10,
   },
   inputLabel: {

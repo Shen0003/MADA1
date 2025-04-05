@@ -1,4 +1,3 @@
-// screens/CompositionScreen.js
 import React, { useState, useEffect, useContext } from 'react';
 import { 
   View, 
@@ -7,340 +6,269 @@ import {
   TouchableOpacity, 
   Image, 
   Animated,
-  Alert,
-  FlatList
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
 import Icon from '../ui/Icon';
 
-const CompositionScreen = ({ navigation, route }) => {
-  const { level = 1 } = route.params;
-  const { updateProgress, awardStars, soundEnabled } = useContext(AppContext);
-  
-  // Game state
+const CompositionScreen = ({ navigation }) => {
+  const { updateProgressScore } = useContext(AppContext);
+  const [level, setLevel] = useState(1);
   const [targetNumber, setTargetNumber] = useState(0);
-  const [numberOptions, setNumberOptions] = useState([]);
-  const [selectedNumbers, setSelectedNumbers] = useState([]);
+  const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
+  const [answeredWrong, setAnsweredWrong] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(5);
   const [isCorrect, setIsCorrect] = useState(null);
-  const [foundCombinations, setFoundCombinations] = useState([]);
-  const [requiredCombinations, setRequiredCombinations] = useState(2);
-  const [bubbleAnimations, setBubbleAnimations] = useState([]);
+  const [bubbleAnimation] = useState(new Animated.Value(0));
+  const [countdown, setCountdown] = useState(3);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [showBar, setShowBar] = useState(false);
+  const wrongAnswers = 3;
   
-  // Generate a new question
-  const generateQuestion = () => {
-    let target, options, combinations;
+  // Generate numbers based on level
+  function generateNumbers(newLevel) {
+    let target, correctFirst, correctSecond, incorrectFirst, incorrectSecond;
     
-    switch(level) {
-      case 1: // Basic addition pairs (up to 10)
-        target = Math.floor(Math.random() * 8) + 3; // 3 to 10
-        options = [];
+    switch(newLevel) {
+      case 1: // Single-digit numbers (sum up to 10)
+        target = Math.floor(Math.random() * 9) + 5; // Ensure target is at least 5
         
-        // Generate number options that can make the target
-        for (let i = 1; i <= target - 1; i++) {
-          options.push(i);
-        }
+        // Correct option
+        correctFirst = Math.floor(Math.random() * (target - 1)) + 1;
+        correctSecond = target - correctFirst;
         
-        // Add a few random numbers that don't work
-        for (let i = 0; i < 3; i++) {
-          let extraNum;
-          do {
-            extraNum = Math.floor(Math.random() * 10) + 1;
-          } while (extraNum >= target || options.includes(extraNum));
-          options.push(extraNum);
-        }
-        
-        // Random sort
-        options.sort(() => Math.random() - 0.5);
-        
-        setRequiredCombinations(2);
+        // Incorrect option
+        do {
+          incorrectFirst = Math.floor(Math.random() * (target + 3)) + 1;
+          incorrectSecond = Math.floor(Math.random() * (target + 3)) + 1;
+        } while (
+          incorrectFirst + incorrectSecond === target || 
+          incorrectFirst === correctFirst || 
+          incorrectSecond === correctSecond
+        );
         break;
+      
+      case 2: // Numbers up to 20
+        target = Math.floor(Math.random() * 15) + 10; // Targets between 10-25
         
-      case 2: // Multiple combinations
-        target = Math.floor(Math.random() * 10) + 6; // 6 to 15
-        options = [];
-        combinations = [];
+        // Correct option
+        correctFirst = Math.floor(Math.random() * (target - 2)) + 1;
+        correctSecond = target - correctFirst;
         
-        // Generate options to ensure multiple valid combinations
-        for (let i = 1; i <= target - 1; i++) {
-          if (i !== target - i) { // Avoid duplicates like [3,3] for target 6
-            options.push(i);
-            
-            // Keep track of valid combinations
-            if (i < target - i) {
-              combinations.push([i, target - i]);
-            }
-          }
-        }
-        
-        // Add a few random numbers that don't work
-        for (let i = 0; i < 3; i++) {
-          let extraNum;
-          do {
-            extraNum = Math.floor(Math.random() * 10) + 1;
-            // Check that this number doesn't inadvertently create another valid pair
-            const complement = target - extraNum;
-            const createsValidPair = options.includes(complement);
-          } while (extraNum >= target || options.includes(extraNum) || 
-                  options.includes(target - extraNum));
-          options.push(extraNum);
-        }
-        
-        // Random sort
-        options.sort(() => Math.random() - 0.5);
-        
-        // Set required combinations based on how many are possible
-        setRequiredCombinations(Math.min(3, combinations.length));
+        // Incorrect option
+        do {
+          incorrectFirst = Math.floor(Math.random() * (target + 5)) + 1;
+          incorrectSecond = Math.floor(Math.random() * (target + 5)) + 1;
+        } while (
+          incorrectFirst + incorrectSecond === target || 
+          incorrectFirst === correctFirst || 
+          incorrectSecond === correctSecond
+        );
         break;
+      
+      case 3: // More challenging combinations
+        target = Math.floor(Math.random() * 20) + 15; // Targets between 15-35
         
-      case 3: // Missing addend focus
-        target = Math.floor(Math.random() * 15) + 6; // 6 to 20
-        options = [];
+        // Correct option
+        correctFirst = Math.floor(Math.random() * (target - 3)) + 1;
+        correctSecond = target - correctFirst;
         
-        // Generate first numbers and their complements
-        for (let i = 0; i < 4; i++) {
-          const firstNum = Math.floor(Math.random() * (target - 1)) + 1;
-          const complement = target - firstNum;
-          
-          // Ensure we don't have duplicates
-          if (!options.includes(firstNum) && !options.includes(complement)) {
-            options.push(firstNum);
-            options.push(complement);
-          }
-        }
-        
-        // Add a few distractors
-        for (let i = 0; i < 2; i++) {
-          let extraNum;
-          do {
-            extraNum = Math.floor(Math.random() * 15) + 1;
-          } while (options.includes(extraNum) || options.includes(target - extraNum));
-          options.push(extraNum);
-        }
-        
-        // Random sort
-        options.sort(() => Math.random() - 0.5);
-        
-        setRequiredCombinations(3);
+        // Incorrect option
+        do {
+          incorrectFirst = Math.floor(Math.random() * (target + 7)) + 1;
+          incorrectSecond = Math.floor(Math.random() * (target + 7)) + 1;
+        } while (
+          incorrectFirst + incorrectSecond === target || 
+          incorrectFirst === correctFirst || 
+          incorrectSecond === correctSecond
+        );
         break;
-        
+      
       default:
-        target = Math.floor(Math.random() * 8) + 3;
-        options = [];
-        for (let i = 1; i <= target - 1; i++) {
-          options.push(i);
-        }
-        options.sort(() => Math.random() - 0.5);
-        setRequiredCombinations(2);
+        target = Math.floor(Math.random() * 10) + 5;
+        correctFirst = Math.floor(Math.random() * (target - 1)) + 1;
+        correctSecond = target - correctFirst;
+        
+        // Incorrect option
+        do {
+          incorrectFirst = Math.floor(Math.random() * (target + 3)) + 1;
+          incorrectSecond = Math.floor(Math.random() * (target + 3)) + 1;
+        } while (incorrectFirst + incorrectSecond === target);
+    }
+    
+    // Randomize the order of correct and incorrect options
+    const options = [
+      { 
+        first: correctFirst, 
+        second: correctSecond, 
+        isCorrect: true 
+      },
+      { 
+        first: incorrectFirst, 
+        second: incorrectSecond, 
+        isCorrect: false 
+      }
+    ];
+    
+    // Shuffle the options
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
     }
     
     setTargetNumber(target);
-    setNumberOptions(options);
-    setSelectedNumbers([]);
-    setFoundCombinations([]);
-    setIsCorrect(null);
-    
-    // Set up animations for number bubbles
-    const animations = options.map(() => new Animated.Value(0));
-    
-    // Start animation sequence for bubbles
-    animations.forEach((anim, index) => {
-      Animated.sequence([
-        Animated.delay(index * 100),
-        Animated.spring(anim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true
-        })
-      ]).start();
-    });
-    
-    setBubbleAnimations(animations);
-  };
+    setOptions(options);
+  }
   
-  // Initialize the game
-  useEffect(() => {
-    generateQuestion();
-  }, [level]);
-  
-  // Handle number selection
-  const handleNumberSelect = (number) => {
-    if (isCorrect !== null) return;
+
+  const handleAnswer = (first, second, isCorrect) => {
+    setShowBar(true);
+    let newQuestionsAnswered = questionsAnswered + 1;
+    setQuestionsAnswered(newQuestionsAnswered);
     
-    // Add the number to selected numbers
-    const newSelectedNumbers = [...selectedNumbers, number];
-    setSelectedNumbers(newSelectedNumbers);
-    
-    // Check if sum equals target
-    const sum = newSelectedNumbers.reduce((a, b) => a + b, 0);
-    
-    if (sum === targetNumber) {
-      // Check if this combination was already found
-      const sortedCombo = [...newSelectedNumbers].sort((a, b) => a - b);
-      const comboKey = sortedCombo.join(',');
+    // Play animation
+    setIsCorrect(isCorrect);
+    Animated.timing(bubbleAnimation, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start(() => {
+      // Reset animation
+      bubbleAnimation.setValue(0);
       
-      if (!foundCombinations.find(combo => combo.key === comboKey)) {
-        // Add to found combinations
-        const newFoundCombinations = [
-          ...foundCombinations, 
-          { numbers: newSelectedNumbers, key: comboKey }
-        ];
-        setFoundCombinations(newFoundCombinations);
-        
-        // Play success sound if enabled
-        if (soundEnabled) {
-          // Play sound here
-        }
-        
-        // Check if enough combinations found
-        if (newFoundCombinations.length >= requiredCombinations) {
-          setIsCorrect(true);
-          setScore(prevScore => prevScore + 1);
-          
-          // Wait before proceeding
-          setTimeout(() => {
-            const newQuestionsAnswered = questionsAnswered + 1;
-            setQuestionsAnswered(newQuestionsAnswered);
-            
-            // Check if game is over
-            if (newQuestionsAnswered >= totalQuestions) {
-              const percentage = Math.round((score + 1) / totalQuestions * 100);
-              
-              // Update progress
-              updateProgress('composition', level, percentage);
-              
-              // Award stars based on performance
-              let starsEarned = 0;
-              if (percentage >= 90) starsEarned = 3;
-              else if (percentage >= 70) starsEarned = 2;
-              else if (percentage >= 50) starsEarned = 1;
-              
-              awardStars(starsEarned);
-              
-              // Show results
-              Alert.alert(
-                'Level Complete!',
-                `You found ${score + 1} out of ${totalQuestions} number combinations!\n\nYou earned ${starsEarned} stars!`,
-                [
-                  { 
-                    text: 'Try Again', 
-                    onPress: () => resetGame() 
-                  },
-                  { 
-                    text: 'Level Select', 
-                    onPress: () => navigation.goBack() 
-                  }
-                ]
-              );
-            } else {
-              // Next question
-              generateQuestion();
-            }
-          }, 1500);
-        }
+      let newScore = score;
+      let newAnsweredWrong = answeredWrong;
+      
+      if (isCorrect) {
+        newScore += 1;
+        setScore(newScore);
+      } else {
+        newAnsweredWrong += 1;
+        setAnsweredWrong(newAnsweredWrong);
+      }
+  
+      // Determine new level
+      let newLevel = level;
+      if (newQuestionsAnswered >= 20) { // Change level at exactly 20 tries
+        newLevel = 3;
+      } 
+      if (newQuestionsAnswered >= 10) { // Change level at exactly 10 tries
+        newLevel = 2;
+      } else {
+        newLevel = 1;
       }
       
-      // Reset selection regardless
-      setSelectedNumbers([]);
-    } else if (sum > targetNumber) {
-      // Reset if sum exceeds target
-      setSelectedNumbers([]);
-    }
-  };
-  
-  // Reset the game
-  const resetGame = () => {
-    setScore(0);
-    setQuestionsAnswered(0);
-    setIsCorrect(null);
-    generateQuestion();
-  };
-  
-  // Handle the Next button
-  const handleNext = () => {
-    if (foundCombinations.length > 0) {
-      // Skip to next question with partial credit
-      const newQuestionsAnswered = questionsAnswered + 1;
-      setQuestionsAnswered(newQuestionsAnswered);
-      
-      // If they found at least one combination, give half credit
-      if (foundCombinations.length > 0 && foundCombinations.length < requiredCombinations) {
-        setScore(prevScore => prevScore + 0.5);
-      }
+      setLevel(newLevel);
       
       // Check if game is over
-      if (newQuestionsAnswered >= totalQuestions) {
-        const percentage = Math.round(score / totalQuestions * 100);
+      if (newAnsweredWrong >= wrongAnswers) {
+        updateProgressScore('composition', score);
         
-        // Update progress
-        updateProgress('composition', level, percentage);
-        
-        // Award stars based on performance
-        let starsEarned = 0;
-        if (percentage >= 90) starsEarned = 3;
-        else if (percentage >= 70) starsEarned = 2;
-        else if (percentage >= 50) starsEarned = 1;
-        
-        awardStars(starsEarned);
-        
-        // Show results
         Alert.alert(
-          'Level Complete!',
-          `You found ${Math.round(score)} out of ${totalQuestions} number combinations!\n\nYou earned ${starsEarned} stars!`,
+          'Game Over!',
+          `Your score: ${score}`,
           [
             { 
               text: 'Try Again', 
               onPress: () => resetGame() 
             },
             { 
-              text: 'Level Select', 
+              text: 'Home', 
               onPress: () => navigation.goBack() 
             }
           ]
         );
       } else {
-        // Next question
-        generateQuestion();
+        // Generate new numbers for next question
+        setTimeout(() => {
+          setIsCorrect(null);
+          generateNumbers(newLevel);
+          setShowBar(false);
+        }, 500);
       }
-    }
+    });
   };
   
-  // Render animated number bubble
-  const renderNumberBubble = ({ item, index }) => {
-    const scale = bubbleAnimations[index]?.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.3, 1]
-    });
-    
-    const opacity = bubbleAnimations[index]?.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1]
-    });
-    
-    return (
-      <Animated.View 
-        style={[
-          styles.numberBubble,
-          { 
-            transform: [{ scale: scale || 1 }],
-            opacity: opacity || 1
-          }
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => handleNumberSelect(item)}
-          style={styles.bubbleTouchable}
-          disabled={selectedNumbers.includes(item) || isCorrect !== null}
-        >
-          <Text style={styles.numberBubbleText}>{item}</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    );
+
+  // Initialize the game
+  useEffect(() => {
+    generateNumbers(1);
+  }, []);
+  
+
+  
+  // Reset the game
+  const resetGame = () => {
+    setScore(0);
+    setQuestionsAnswered(0);
+    setAnsweredWrong(0);
+    setLevel(1);
+    setIsCorrect(null);
+    generateNumbers(1);
+    setGameStarted(false);
+    setCountdown(3);
+    setShowBar(false);
   };
+
+  // Initialize the game with countdown
+  useEffect(() => {
+    if (gameStarted) return; // this skip this effect if game has already started
+
+    const countdownInterval = setInterval(() => {
+      setCountdown(prevCount => {
+        if (prevCount <= 1) {
+          clearInterval(countdownInterval);
+          setGameStarted(true);
+          generateNumbers(1);
+          return 0;
+        }
+        return prevCount - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(countdownInterval);
+  }, [gameStarted]);
+
+  // Bubble animation
+  const bubbleScale = bubbleAnimation.interpolate({
+    inputRange: [0, 0.2, 0.5, 0.8, 1],
+    outputRange: [1, 1.2, 1.5, 1.2, 1]
+  });
+
+  // Render countdown or game based on gameStarted state
+  if (!gameStarted) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.levelTitle}>Level {level}</Text>
+          <View style={styles.scoreContainer}>
+            <Text style={styles.scoreText}>{score}</Text>
+            <Icon name="star" size={24} color="#f8b400" />
+          </View>
+        </View>
+        
+        <View style={styles.countdownContainer}>
+          <Image 
+            source={require('../assets/composition_icon.png')} 
+            style={styles.symbolImage} 
+          />
+          <Text style={styles.countdownText}>Get Ready!</Text>
+          <Text style={styles.countdownNumber}>{countdown}</Text>
+          <Text style={styles.countdownInstructions}>
+            You will need to combine two numbers to match the target!
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -349,97 +277,73 @@ const CompositionScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-            <Icon name="arrow-back" size={24} color="black" />
+          <Icon name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
+
         <Text style={styles.levelTitle}>Level {level}</Text>
         <View style={styles.scoreContainer}>
-          <Text style={styles.scoreText}>{score}/{totalQuestions}</Text>
+          <Text style={styles.scoreText}>{score}</Text>
+          <Icon name="star" size={24} color="#f8b400" />
         </View>
       </View>
       
       <View style={styles.questionContainer}>
-        <View style={styles.targetContainer}>
-          <Text style={styles.targetLabel}>Make this number:</Text>
-          <View style={styles.targetNumberContainer}>
-            <Text style={styles.targetNumber}>{targetNumber}</Text>
-          </View>
-          
-          <View style={styles.combinationsContainer}>
-            <Text style={styles.foundLabel}>
-              Found: {foundCombinations.length}/{requiredCombinations}
-            </Text>
-            <View style={styles.combinations}>
-              {foundCombinations.map((combo, index) => (
-                <View key={index} style={styles.combinationItem}>
-                  <Text style={styles.combinationText}>
-                    {combo.numbers.join(' + ')} = {targetNumber}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-        
-        <View style={styles.selectionContainer}>
-          <Text style={styles.selectionLabel}>Current selection:</Text>
-          <View style={styles.selectionDisplay}>
-            {selectedNumbers.length > 0 ? (
-              <Text style={styles.selectionText}>
-                {selectedNumbers.join(' + ')} 
-                {selectedNumbers.reduce((a, b) => a + b, 0) <= targetNumber && 
-                  ` = ${selectedNumbers.reduce((a, b) => a + b, 0)}`}
-              </Text>
-            ) : (
-              <Text style={styles.selectionPlaceholder}>
-                Select number bubbles below
-              </Text>
-            )}
-          </View>
-        </View>
-        
-        <View style={styles.bubblesContainer}>
-          <FlatList
-            data={numberOptions}
-            renderItem={renderNumberBubble}
-            keyExtractor={(item, index) => `bubble-${index}`}
-            numColumns={4}
-            contentContainerStyle={styles.bubbleList}
+        <View style={styles.questionTextContainer}>
+          <Image 
+            source={require('../assets/composition_icon.png')} 
+            style={styles.symbolImage} 
           />
+          <Text style={styles.questionText}>
+            Make the number
+          </Text>
         </View>
         
-        {foundCombinations.length > 0 && foundCombinations.length < requiredCombinations && (
-          <TouchableOpacity
-            style={styles.nextButton}
-            onPress={handleNext}
-          >
-            <Text style={styles.nextButtonText}>
-              Next Number
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.targetContainer}>
+          <Text style={styles.targetNumberText}>{targetNumber}</Text>
+        </View>
+        
+        <View style={styles.numbersContainer}>
+          {options.map((numSet, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.numberButton,
+                isCorrect === true && numSet.isCorrect 
+                  ? styles.correctButton 
+                  : null,
+                isCorrect === false && !numSet.isCorrect 
+                  ? styles.incorrectButton 
+                  : null
+              ]}
+              onPress={() => handleAnswer(numSet.first, numSet.second, numSet.isCorrect)}
+              disabled={isCorrect !== null}
+            >
+              <Animated.View 
+                style={[
+                  styles.numberBubble,
+                  { transform: [{ scale: bubbleScale }] }
+                ]}
+              >
+                <Text style={styles.numberText}>{numSet.first}</Text>
+                <Text style={styles.plusText}>and</Text>
+                <Text style={styles.numberText}>{numSet.second}</Text>
+              </Animated.View>
+            </TouchableOpacity>
+          ))}
+        </View>
         
         <View style={styles.hintContainer}>
           <Text style={styles.hintText}>
-            {level === 1 
-              ? 'Find pairs of numbers that add up to the target number'
-              : level === 2
-                ? 'Find different combinations that make the target number'
-                : 'Find the missing number to complete each sum'}
+            Combine the two numbers to match the target!
           </Text>
+          <Icon name="bulb" size={24} color="brown" />
         </View>
       </View>
       
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View 
-            style={[
-              styles.progressFill, 
-              { width: `${(questionsAnswered / totalQuestions) * 100}%` }
-            ]} 
-          />
-        </View>
+        <View style={[styles.progressBar, { backgroundColor: showBar ? 'brown' : '#eee' }]}></View>
         <Text style={styles.progressText}>
-          {questionsAnswered}/{totalQuestions} Questions
+          {questionsAnswered} Questions Answered!
         </Text>
       </View>
     </SafeAreaView>
@@ -447,6 +351,8 @@ const CompositionScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
+  // Most styles are similar to the Comparison Screen
+  // with some modifications specific to Composition Screen
   container: {
     flex: 1,
     backgroundColor: '#f8f6ff',
@@ -462,17 +368,16 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 10,
   },
-  backIcon: {
-    width: 24,
-    height: 24,
-  },
   levelTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#4fc3f7',
+    color: 'brown',
   },
   scoreContainer: {
-    backgroundColor: '#4fc3f7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'brown',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
@@ -482,167 +387,136 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  starIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 5,
+  },
   questionContainer: {
     flex: 1,
-    padding: 20,
-  },
-  targetContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  targetLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 10,
-  },
-  targetNumberContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#4fc3f7',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  questionTextContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  questionText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  targetContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  targetNumberText: {
+    fontSize: 50,
+    fontWeight: 'bold',
+    color: '#ff9500',
+    marginRight: 15,
+  },
+  numbersContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 40,
+  },
+  numberButton: {
+    width: 150,
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 75,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    marginBottom: 20,
-  },
-  targetNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  combinationsContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  foundLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4fc3f7',
-    marginBottom: 5,
-  },
-  combinations: {
-    width: '100%',
-  },
-  combinationItem: {
-    backgroundColor: 'rgba(79, 195, 247, 0.1)',
-    padding: 10,
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  combinationText: {
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
-  },
-  selectionContainer: {
-    marginBottom: 20,
-  },
-  selectionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 5,
-  },
-  selectionDisplay: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    minHeight: 50,
-    justifyContent: 'center',
-  },
-  selectionText: {
-    fontSize: 18,
-    color: '#333',
-    textAlign: 'center',
-  },
-  selectionPlaceholder: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  bubblesContainer: {
-    flex: 1,
-    marginBottom: 20,
-  },
-  bubbleList: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
   },
   numberBubble: {
-    margin: 8,
-  },
-  bubbleTouchable: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    padding: 50,
   },
-  numberBubbleText: {
-    fontSize: 24,
+  numberText: {
+    fontSize: 30,
     fontWeight: 'bold',
-    color: '#4fc3f7',
+    color: '#333',
   },
-  nextButton: {
-    backgroundColor: '#4fc3f7',
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignSelf: 'center',
-    marginBottom: 15,
+  plusText: {
+    fontSize: 20,
+    color: 'brown',
+    marginVertical: 5,
   },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  correctButton: {
+    backgroundColor: '#7fd67f',
+  },
+  incorrectButton: {
+    backgroundColor: '#ff7f7f',
   },
   hintContainer: {
-    backgroundColor: 'rgba(79, 195, 247, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(186, 41, 15, 0.1)',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 15,
     borderRadius: 10,
-    marginBottom: 10,
   },
   hintText: {
-    fontSize: 14,
-    color: '#4fc3f7',
-    textAlign: 'center',
+    fontSize: 16,
+    color: 'brown',
+    marginRight: 10,
+  },
+  symbolImage: {
+    width: 40,
+    height: 40,
+    marginBottom: 10,
   },
   progressContainer: {
     padding: 20,
-    paddingTop: 0,
   },
   progressBar: {
     height: 10,
-    backgroundColor: '#eee',
+    backgroundColor: 'brown',
     borderRadius: 5,
     marginBottom: 5,
     overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4fc3f7',
-    borderRadius: 5,
   },
   progressText: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  countdownContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  countdownText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'brown',
+    marginBottom: 20,
+  },
+  countdownNumber: {
+    fontSize: 80,
+    fontWeight: 'bold',
+    color: '#ff9500',
+    marginBottom: 30,
+  },
+  countdownInstructions: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#333',
+    maxWidth: '80%',
   },
 });
 

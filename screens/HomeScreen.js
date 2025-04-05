@@ -1,5 +1,4 @@
-// screens/HomeScreen.js
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -10,18 +9,41 @@ import {
   Dimensions,
   ImageBackground,
   ScrollView, 
+  AppState,
 } from 'react-native';
+import SoundPlayer from 'react-native-sound-player';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppContext } from '../context/AppContext';
-import { useFonts } from 'expo-font';
 import Icon from '../ui/Icon';
 
+
 const HomeScreen = ({ navigation }) => {
-  const { playerName, stars, progressScore } = useContext(AppContext);
+  const { playerName, progressScore } = useContext(AppContext);
   const [bounce] = useState(new Animated.Value(0));
+  const appState = useRef(AppState.currentState);
+  const soundInitialized = useRef(false);
   
+  // Initialize and play background music
+  const playBackgroundMusic = () => {
+    try {
+      if (!soundInitialized.current) {
+        SoundPlayer.loadAsset(require('../assets/bgm.mp3'));
+        SoundPlayer.setVolume(1);
+        SoundPlayer.setNumberOfLoops(-1); // Loop infinitely
+        soundInitialized.current = true;
+      }
+      
+      // Play the sound
+      SoundPlayer.play();
+    } catch (error) {
+      console.log('Error playing sound:', error);
+    }
+  };
+
   // Animation for module buttons
   useEffect(() => {
+    playBackgroundMusic();
+    
     Animated.loop(
       Animated.sequence([
         Animated.timing(bounce, {
@@ -36,6 +58,61 @@ const HomeScreen = ({ navigation }) => {
         })
       ])
     ).start();
+
+    // sound event listeners
+    const onFinishedLoadingSubscription = SoundPlayer.addEventListener('FinishedLoading', () => {
+      console.log('Sound loaded successfully');
+    });
+    
+    const onFinishedPlayingSubscription = SoundPlayer.addEventListener('FinishedPlaying', () => {
+      console.log('Sound finished playing');
+      playBackgroundMusic(); // Restart the sound if it finishes playing
+    });
+    
+    const onFinishedLoadingFileSubscription = SoundPlayer.addEventListener('FinishedLoadingFile', () => {
+      console.log('File loaded successfully');
+    });
+    
+    const onFinishedLoadingURLSubscription = SoundPlayer.addEventListener('FinishedLoadingURL', () => {
+      console.log('URL loaded successfully');
+    });
+
+    // AppState listener
+    const appStateSubscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+        // App has gone to background, pause music
+        try {
+          SoundPlayer.pause();
+        } catch (error) {
+          console.log('Error pausing sound:', error);
+        }
+      } else if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to foreground, resume music
+        try {
+          SoundPlayer.resume();
+        } catch (error) {
+          console.log('Error resuming sound:', error);
+          // Try playing again if resuming fails
+          playBackgroundMusic();
+        }
+      }
+      
+      appState.current = nextAppState;
+    });
+    
+    // Cleanup function
+    return () => {
+      try {
+        SoundPlayer.stop();
+        onFinishedLoadingSubscription.remove();
+        onFinishedPlayingSubscription.remove();
+        onFinishedLoadingFileSubscription.remove();
+        onFinishedLoadingURLSubscription.remove();
+        appStateSubscription.remove();
+      } catch (error) {
+        console.log('Error in cleanup:', error);
+      }
+    };
   }, []);
 
   const translateY = bounce.interpolate({
@@ -50,10 +127,10 @@ const HomeScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
           <View style={styles.topContainer}>
             <View style={styles.header}>
-                <Text style={styles.title}>Math Explorers</Text>
+                <Text style={styles.title}>Mathdu</Text>
                 <View style={styles.starContainer}>
                   <Icon name="star" size={24} color="#f8b400" />
-                  <Text style={styles.starCount}>{progressScore['comparison'] + progressScore['ordering']}</Text>
+                  <Text style={styles.starCount}>{progressScore['comparison'] + progressScore['ordering'] + progressScore['composition']}</Text>
                 </View>
             </View>
             <View style={styles.greeting}>
@@ -98,10 +175,10 @@ const HomeScreen = ({ navigation }) => {
                 <Animated.View style={[{transform: [{translateY}]}]}>
                   <TouchableOpacity 
                       style={[styles.moduleButton, styles.compositionButton]}
-                      onPress={() => navigation.navigate('LevelSelect', { module: 'composition' })}
+                      onPress={() => navigation.navigate('Composition')}
                   >
                     <Image source={require('../assets/composition_icon.png')} style={styles.moduleIcon} />
-                    <Text style={styles.moduleText}>Make Numbers</Text>
+                    <Text style={styles.moduleText}>Compose Numbers</Text>
                     <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
                     <View style={styles.starContainer}>
                       <Icon name="star" size={24} color="#f8b400" />
@@ -112,12 +189,12 @@ const HomeScreen = ({ navigation }) => {
 
                 <Animated.View style={[{transform: [{translateY}]}]}>
                   <TouchableOpacity 
-                      style={[styles.moduleButton, styles.compositionButton]}
-                      onPress={() => navigation.navigate('GeminiChat')}
+                      style={[styles.moduleButton, styles.mathStoryButton]}
+                      onPress={() => navigation.navigate('MathStory')}
                   >
-                      <Image source={require('../assets/composition_icon.png')} style={styles.moduleIcon} />
-                      <Text style={styles.moduleText}>Make Numbers</Text>
-                      <Text style={styles.moduleDesc}>Find parts that make a whole</Text>
+                      <Image source={require('../assets/math_story_icon.png')} style={styles.moduleIcon} />
+                      <Text style={styles.moduleText}>Math Story</Text>
+                      <Text style={styles.moduleDesc}>Solve some interesting math</Text>
                   </TouchableOpacity>
                 </Animated.View>
             </View>
@@ -141,7 +218,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   topContainer: {
-
     justifyContent: 'center',
     backgroundColor: 'white',
     borderRadius: 20,
@@ -231,7 +307,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f06292',
   },
   compositionButton: {
-    backgroundColor: '#4fc3f7',
+    backgroundColor: 'brown',
+  },
+  mathStoryButton: {
+    backgroundColor: '#5B8E7D',
   },
   moduleIcon: {
     width: 60,
